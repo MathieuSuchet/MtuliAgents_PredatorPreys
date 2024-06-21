@@ -11,6 +11,12 @@ from predator_preys.utils import Food, Grid, Runner, MailBox, MessageHandler, Me
 
 class Map:
     def __init__(self, x_lims, y_lims, game_config: GameConfig):
+        """
+        Responsable de la partie logique de la simulation
+        :param x_lims: Taille de la carte en x
+        :param y_lims: Taille de la carte en y
+        :param game_config: Configuration du jeu
+        """
         self.game_config = game_config
         self.lims = (x_lims, y_lims)
 
@@ -74,6 +80,9 @@ class Map:
             self.mailbox[1].add_entity(prey)
 
     def update(self):
+        """
+        Mise à jour de la boucle
+        """
         if self.__cnt_food_spawn >= self.food_spawn_rate and len(self.entities.foods) < self.food_cap:
             food = Food.spawn_random(*self.lims)
             self.entities.foods.append(food)
@@ -172,6 +181,9 @@ class Renderer(object):
     RUNNER_COLOR = (0, 255, 0)
 
     def __init__(self):
+        """
+        Responsable de l'affichage du jeu
+        """
         self.display_size = (600, 600)
         self.screen_size = (700, 700)
         self.screen = pygame.display.set_mode(self.screen_size)
@@ -181,31 +193,33 @@ class Renderer(object):
         self.screen.fill((255, 255, 255))
         self.font = pygame.font.SysFont('Calibri', 15)
 
-    def render_victory(self, predator_win: bool = False):
-        if predator_win:
-            te = self.font.render("Predators won !", True, (0, 0, 0))
-            self.screen.blit(te, (50, self.display_size[1] - 40))
-        else:
-            te = self.font.render("Preys won !", True, (0, 0, 0))
-            self.screen.blit(te, (50, self.display_size[1] - 40))
-        pygame.display.update()
-
-    def render_draw(self):
-        te = self.font.render("Draw", True, (0, 0, 0))
-        self.screen.blit(te, (50, self.display_size[1] - 40))
-        pygame.display.update()
-
     def update_display(self, map, n_steps):
+        """
+        Mise à jour de l'affichage
+        :param map: La carte
+        :param n_steps: Nombre d'étapes actuelle (pour l'afficher)
+        """
         self.pygame_display(map, n_steps)
         pygame.display.update()
 
     def draw_legend(self, legend, color, location):
+        """
+        Affiche la legende pour une entité
+        :param legend: Le nom de l'entité
+        :param color: La couleur qui correspond à l'entité
+        :param location: L'endroit où dessiner la légende
+        """
         pygame.draw.circle(self.screen, color=color, center=location, radius=5)
         legend_predator = self.font.render(legend, True, (0, 0, 0))
 
         self.screen.blit(legend_predator, (location[0] + 10, location[1] - 8))
 
     def pygame_display(self, map, n_steps):
+        """
+        Affichage sur la fenêtre
+        :param map: La carte
+        :param n_steps: Le nombre d'étapes actuelle (pour l'afficher)
+        """
         aspect_ratio = 1.2
         self.screen.fill((255, 255, 255))
         text_preys = self.font.render(f'Number of preys : {len(map.entities.preys)}', True, (0, 0, 0))
@@ -232,13 +246,6 @@ class Renderer(object):
             if isinstance(e, Howler):
                 color = self.HOWLER_COLOR
 
-            # energy_left = self.font.render(str(e.stamina), True, (0, 0, 0))
-            # self.screen.blit(energy_left, (
-            #     (e.position[0] / (map.lims[0] * aspect_ratio)) *
-            #     self.screen_size[0] + (self.screen_size[0] - self.display_size[0]) - 20,
-            #     (e.position[1] / (map.lims[1] * aspect_ratio)) *
-            #     self.screen_size[1] + (self.screen_size[1] - self.display_size[1]) - 20
-            # ))
             pygame.draw.circle(self.screen, color=color, center=(
                 (e.position[0] / (map.lims[0] * aspect_ratio)) *
                 self.screen_size[0] + (self.screen_size[0] - self.display_size[0]),
@@ -246,15 +253,6 @@ class Renderer(object):
                 self.screen_size[1] + (self.screen_size[1] - self.display_size[1])
             ), radius=5)
         for e in map.entities.predators:
-
-            # energy_left = self.font.render(str(e.stamina), True, (0, 0, 0))
-            # self.screen.blit(energy_left, (
-            #     (e.position[0] / (map.lims[0] * aspect_ratio)) *
-            #     self.screen_size[0] + (self.screen_size[0] - self.display_size[0]) - 20,
-            #     (e.position[1] / (map.lims[1] * aspect_ratio)) *
-            #     self.screen_size[1] + (self.screen_size[1] - self.display_size[1]) - 20
-            # ))
-
             color = self.FOLLOWER_COLOR
             if isinstance(e, Leader):
                 color = self.LEADER_COLOR
@@ -276,6 +274,10 @@ class Renderer(object):
 
 class Manager:
     def __init__(self, game_config: GameConfig):
+        """
+        Responsable du jeu
+        :param game_config: Configuration du jeu
+        """
         self.map = Map(400, 400, game_config)
         self.time = 0
         self.steps = 0
@@ -283,20 +285,32 @@ class Manager:
         self.renderer = Renderer()
 
     def step(self):
+        """
+        Avancer d'un tick dans la boucle
+        """
         self.steps += 1
         self.map.update()
 
     def reset(self):
+        """
+        Réinitialiser la boucle
+        """
         self.map = Map(*self.map.lims, self.map.game_config)
         self.time = 0
         self.steps = 0
         self.renderer = Renderer()
 
     def close(self):
+        """
+        Termine l'environnement
+        """
         self.map = None
         self.time = 0
         self.steps = 0
         self.renderer = Renderer()
 
     def render(self):
+        """
+        Affiche l'environnement
+        """
         self.renderer.update_display(self.map, self.steps)
