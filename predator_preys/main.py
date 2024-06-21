@@ -1,4 +1,4 @@
-import time
+import pygame.event
 
 from predator_preys.managers import Manager
 from predator_preys.utils import GameConfig, PreyConfig, PredatorConfig, FoodConfig
@@ -25,10 +25,16 @@ game_config = GameConfig(
 )
 
 m = Manager(game_config)
+running = True
 
-while True:
+while running:
     m.render()
     m.step()
+
+    for e in pygame.event.get():
+        if e.type == pygame.QUIT:
+            pygame.quit()
+            running = False
 
     if (len(m.map.entities.preys) == 0
             or len(m.map.entities.predators) == 0

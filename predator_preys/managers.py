@@ -179,7 +179,6 @@ class Renderer(object):
 
         pygame.display.set_caption("Prey / Predators")
         self.screen.fill((255, 255, 255))
-        self.running = True
         self.font = pygame.font.SysFont('Calibri', 15)
 
     def render_victory(self, predator_win: bool = False):
@@ -199,10 +198,6 @@ class Renderer(object):
     def update_display(self, map, n_steps):
         self.pygame_display(map, n_steps)
         pygame.display.update()
-        for e in pygame.event.get():
-            if e.type == pygame.QUIT:
-                pygame.quit()
-                self.running = False
 
     def draw_legend(self, legend, color, location):
         pygame.draw.circle(self.screen, color=color, center=location, radius=5)
@@ -237,13 +232,13 @@ class Renderer(object):
             if isinstance(e, Howler):
                 color = self.HOWLER_COLOR
 
-            energy_left = self.font.render(str(e.stamina), True, (0, 0, 0))
-            self.screen.blit(energy_left, (
-                (e.position[0] / (map.lims[0] * aspect_ratio)) *
-                self.screen_size[0] + (self.screen_size[0] - self.display_size[0]) - 20,
-                (e.position[1] / (map.lims[1] * aspect_ratio)) *
-                self.screen_size[1] + (self.screen_size[1] - self.display_size[1]) - 20
-            ))
+            # energy_left = self.font.render(str(e.stamina), True, (0, 0, 0))
+            # self.screen.blit(energy_left, (
+            #     (e.position[0] / (map.lims[0] * aspect_ratio)) *
+            #     self.screen_size[0] + (self.screen_size[0] - self.display_size[0]) - 20,
+            #     (e.position[1] / (map.lims[1] * aspect_ratio)) *
+            #     self.screen_size[1] + (self.screen_size[1] - self.display_size[1]) - 20
+            # ))
             pygame.draw.circle(self.screen, color=color, center=(
                 (e.position[0] / (map.lims[0] * aspect_ratio)) *
                 self.screen_size[0] + (self.screen_size[0] - self.display_size[0]),
@@ -252,13 +247,13 @@ class Renderer(object):
             ), radius=5)
         for e in map.entities.predators:
 
-            energy_left = self.font.render(str(e.stamina), True, (0, 0, 0))
-            self.screen.blit(energy_left, (
-                (e.position[0] / (map.lims[0] * aspect_ratio)) *
-                self.screen_size[0] + (self.screen_size[0] - self.display_size[0]) - 20,
-                (e.position[1] / (map.lims[1] * aspect_ratio)) *
-                self.screen_size[1] + (self.screen_size[1] - self.display_size[1]) - 20
-            ))
+            # energy_left = self.font.render(str(e.stamina), True, (0, 0, 0))
+            # self.screen.blit(energy_left, (
+            #     (e.position[0] / (map.lims[0] * aspect_ratio)) *
+            #     self.screen_size[0] + (self.screen_size[0] - self.display_size[0]) - 20,
+            #     (e.position[1] / (map.lims[1] * aspect_ratio)) *
+            #     self.screen_size[1] + (self.screen_size[1] - self.display_size[1]) - 20
+            # ))
 
             color = self.FOLLOWER_COLOR
             if isinstance(e, Leader):
