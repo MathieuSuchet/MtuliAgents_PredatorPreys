@@ -1,0 +1,33 @@
+Objectifs communs :
+- Prédateurs :
+	- Manger les proies
+
+- Proies :
+	- Manger la nourriture
+	- Fuir les prédateurs
+
+
+Roles et responsabilités :
+- Prédateurs :
+	- Chef de meute
+	- Suiveurs
+
+- Proies :
+	- Guetteurs ? Hurleurs ?
+	- Leurres
+	- Courreur
+
+Mécanisme de communications :
+- Prédateurs :
+	- Boite pour chefs de meute
+	- Si chef de meute meurt -> Un autre chef basé sur l'endurance actuelle
+
+- Proies :
+	- Guetteurs/Hurleurs -> Brodcast à toutes les proies qu'il y a un prédateur proche
+	- Leurres -> Aller vers un prédateur et fuir loin des proies
+	- Courreurs -> Fuir et manger
+	
+
+Algorithme de coordinations:
+	
+	 
