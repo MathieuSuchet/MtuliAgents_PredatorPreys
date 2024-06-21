@@ -266,7 +266,38 @@ class Predator(Positioned):
         self.stalling = False
         self.time_to_stall = 1.0
         self.cnt_time = 0.0
+
+        self.picked_dir = np.zeros(shape=(2, ))
+        self.time_to_wander = 30
+        self._cnt_ttw = 30
+
         self.tile = (-1, -1)
+
+    def wander_around(self):
+
+        if self._cnt_ttw < self.time_to_wander:
+            self.position += self.picked_dir * self.velocity
+            self._cnt_ttw += 1
+        else:
+            self.picked_dir = np.random.uniform(high=1, low=-1, size=(2, ))
+            self.picked_dir /= np.linalg.norm(self.picked_dir)
+            self._cnt_ttw = 0
+
+        self.stamina -= 1
+
+    def act(self, closest_prey):
+
+        if not closest_prey:
+            self.wander_around()
+        else:
+            self.go_towards(closest_prey)
+            if np.linalg.norm(
+                    closest_prey.position - self.position) < Predator.eating_distance and not closest_prey.dead:
+                closest_prey.dead = True
+                self.stamina += 50
+                self.can_reproduce = True
+                self.cnt_time = time.time() + self.time_to_stall
+                self.stalling = True
 
     def update(self, map: Grid, channels: Dict[str, MessageBroker], sender: MessageSender):
 
@@ -288,18 +319,7 @@ class Predator(Positioned):
                             closest_prey.position - self.position)):
                             closest_prey = entity
 
-        if closest_prey:
-            self.go_towards(closest_prey)
-            if np.linalg.norm(
-                    closest_prey.position - self.position) < Predator.eating_distance and not closest_prey.dead:
-                closest_prey.dead = True
-                self.stamina += 50
-                self.can_reproduce = True
-                self.cnt_time = time.time() + self.time_to_stall
-                self.stalling = True
-
-        else:
-            self.stamina -= 1
+        self.act(closest_prey)
 
 
 class Prey(Positioned):
@@ -315,14 +335,52 @@ class Prey(Positioned):
         self.can_reproduce = False
         self.tile = (-1, -1)
 
+        self.picked_dir = np.zeros(shape=(2,))
+        self.time_to_wander = 30
+        self._cnt_ttw = 30
+
     def update(self, grid: Grid, channels: Dict[str, MessageBroker], sender: MessageSender):
         pass
+
+    def wander_around(self):
+
+        if self._cnt_ttw < self.time_to_wander:
+            self.position += self.picked_dir * self.velocity
+            self._cnt_ttw += 1
+        else:
+            self.picked_dir = np.random.uniform(high=1, low=-1, size=(2,))
+            self.picked_dir /= np.linalg.norm(self.picked_dir)
+            self._cnt_ttw = 0
+
+        self.stamina -= 1
 
     def try_to_eat(self, food: Food):
         if np.linalg.norm(food.position - self.position) < self.eating_distance:
             food.dead = True
             self.stamina += 50
             self.can_reproduce = True
+
+    def act(self, closest_predator, closest_food):
+        if not closest_food and not closest_predator:
+            # wander around
+            self.wander_around()
+
+        elif closest_predator and not closest_food or (closest_food and closest_predator and np.linalg.norm(
+                closest_food.position - self.position) >= np.linalg.norm(
+            closest_predator.position - self.position)):
+            # Run
+            self.run_away_from(closest_predator)
+
+        elif ((closest_food and not closest_predator)
+                or (
+                        closest_food
+                        and closest_predator
+                        and np.linalg.norm(closest_predator.position - self.position) > np.linalg.norm(
+                    closest_food.position - self.position)
+                )):
+            # Go towards
+            self.go_towards(closest_food)
+            self.try_to_eat(closest_food)
 
 
 class Runner(Prey):
@@ -334,9 +392,16 @@ class Runner(Prey):
         closest_predator = None
         closest_food = None
 
+        if "self" in channels and channels["self"].has_message():
+            message = channels["self"].pop_message()
+
+            if message.m_type == MessageType.PREDATOR_AT:
+                closest_predator = Predator(*message.content)
+
         for i in range(-self.nb_tiles_around, self.nb_tiles_around + 1):
             for j in range(-self.nb_tiles_around, self.nb_tiles_around + 1):
-                if self.tile[0] + i < 0 or self.tile[0] + i >= grid.tiles.shape[0] or self.tile[1] + j < 0 or self.tile[1] + j >= grid.tiles.shape[1]:
+                if self.tile[0] + i < 0 or self.tile[0] + i >= grid.tiles.shape[0] or self.tile[1] + j < 0 or self.tile[
+                    1] + j >= grid.tiles.shape[1]:
                     continue
                 for entity in grid.tiles[self.tile[0] + i, self.tile[1] + j].get_entities():
                     if isinstance(entity, Predator) or issubclass(type(entity), Predator):
@@ -354,31 +419,7 @@ class Runner(Prey):
                                     entity.position - self.position)):
                             closest_food = entity
 
-        # we got the closest predator and food, choice
-
-        # we got none around
-        if not closest_food and not closest_predator:
-            # wander around
-            direction = np.random.uniform(-1, 1, size=(2,))
-            direction /= np.linalg.norm(direction)
-
-            self.position += direction * self.velocity
-
-        elif closest_predator and not closest_food or (closest_food and closest_predator and np.linalg.norm(
-                closest_food.position - self.position) >= np.linalg.norm(closest_predator.position - self.position)):
-            # Run
-            self.run_away_from(closest_predator)
-
-        elif ((closest_food and not closest_predator)
-              or (
-                      closest_food
-                      and closest_predator
-                      and np.linalg.norm(closest_predator.position - self.position) > np.linalg.norm(
-                  closest_food.position - self.position)
-              )):
-            # Go towards
-            self.go_towards(closest_food)
-            self.try_to_eat(closest_food)
+        self.act(closest_predator, closest_food)
 
 
 class Howler(Prey):
@@ -392,6 +433,10 @@ class Howler(Prey):
     def update(self, grid: Grid, channels: Dict[str, MessageBroker], sender: MessageSender):
         entities_to_howl_at = []
         predators_to_howl = []
+
+        closest_predator = None
+        closest_food = None
+
         for i in range(-self.nb_tiles_around, self.nb_tiles_around + 1):
             for j in range(-self.nb_tiles_around, self.nb_tiles_around + 1):
                 if self.tile[0] + i < 0 or self.tile[0] + i >= grid.tiles.shape[0] or self.tile[1] + j < 0 or \
@@ -400,18 +445,31 @@ class Howler(Prey):
 
                 t = grid.tiles[self.tile[0] + i, self.tile[1] + j]
                 for entity in t.get_entities():
+
+                    if isinstance(entity, Predator) or issubclass(type(entity), Predator):
+                        predators_to_howl.append(entity.position)
+                        if (
+                                (closest_predator
+                                 and np.linalg.norm(closest_predator.position - self.position) > np.linalg.norm(
+                                            entity.position - self.position)) or not closest_predator) \
+                                or not closest_predator:
+                            closest_predator = entity
+
+                    if isinstance(entity, Food):
+                        if not closest_food or \
+                                (closest_food and np.linalg.norm(
+                                    closest_food.position - self.position) > np.linalg.norm(
+                                    entity.position - self.position)):
+                            closest_food = entity
+
                     if isinstance(entity, Prey):
                         entities_to_howl_at.append(entity.id)
-                    if isinstance(entity, Predator):
-                        predators_to_howl.append(entity.position)
 
         for p in predators_to_howl:
             for e in entities_to_howl_at:
                 sender.send(self.id, e, MessageType.PREDATOR_AT, p)
 
-
-
-
+        self.act(closest_predator, closest_food)
 
 
 class Decoys(Prey):
@@ -469,22 +527,7 @@ class Decoys(Prey):
                                         entity.position - self.position)):
                                 closest_food = entity
 
-            if closest_predator and closest_food:
-                if np.linalg.norm(self.position - closest_predator.position) < np.linalg.norm(
-                        self.position - closest_food.position):
-                    closest_food = None
-                else:
-                    closest_predator = None
-
-            if closest_predator and not closest_food:
-                if np.linalg.norm(self.position - closest_predator.position) > 30:
-                    self.go_towards(closest_predator)
-                else:
-                    self.run_away_from(closest_predator)
-
-            if not closest_predator and closest_food:
-                self.go_towards(closest_food)
-                self.try_to_eat(closest_food)
+            self.act(closest_predator, closest_food)
 
 
 class Leader(Predator):
@@ -533,5 +576,8 @@ class Follower(Predator):
 
                 self.position += direction * self.velocity
                 self.stamina -= 1
+            else:
+                super().update(map, channels, sender)
+
         else:
             super().update(map, channels, sender)

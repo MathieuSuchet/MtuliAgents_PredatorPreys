@@ -24,14 +24,14 @@ game_config = GameConfig(
     )
 )
 
-m = Manager(400, 400, game_config)
+m = Manager(game_config)
 
 while True:
     m.render()
     m.step()
 
     if (len(m.map.entities.preys) == 0
-            or len(m.map.entities.predators) == 0):
-            # or len(m.map.entities.preys) > 500
-            # or len(m.map.entities.predators) > 500):
+            or len(m.map.entities.predators) == 0
+            or len(m.map.entities.preys) > 300
+            or len(m.map.entities.predators) > 300):
         m.reset()

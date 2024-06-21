@@ -16,7 +16,7 @@ class Map:
 
         self.entities = EntityBuffer()
 
-        self.food_cap = 5
+        self.food_cap = 100
         self.food_spawn_rate = 1
         self.__cnt_food_spawn = 0
 
@@ -165,6 +165,12 @@ class Map:
 
 
 class Renderer(object):
+    DECOY_COLOR = (0, 255, 255)
+    HOWLER_COLOR = (0, 128, 128)
+    LEADER_COLOR = (255, 255, 0)
+    FOLLOWER_COLOR = (255, 0, 0)
+    RUNNER_COLOR = (0, 255, 0)
+
     def __init__(self):
         self.display_size = (600, 600)
         self.screen_size = (700, 700)
@@ -198,6 +204,12 @@ class Renderer(object):
                 pygame.quit()
                 self.running = False
 
+    def draw_legend(self, legend, color, location):
+        pygame.draw.circle(self.screen, color=color, center=location, radius=5)
+        legend_predator = self.font.render(legend, True, (0, 0, 0))
+
+        self.screen.blit(legend_predator, (location[0] + 10, location[1] - 8))
+
     def pygame_display(self, map, n_steps):
         aspect_ratio = 1.2
         self.screen.fill((255, 255, 255))
@@ -209,21 +221,21 @@ class Renderer(object):
         self.screen.blit(text_predators, (0, 15))
         self.screen.blit(text_steps, (0, 30))
 
-        # for line in map.grid.tiles:
-        #     for t in line:
-        #         tile_size = 35
-        #
-        #         rect = pygame.Rect(
-        #             t.tile_i[0] * tile_size,
-        #             t.tile_i[1] * tile_size, tile_size, tile_size
-        #         )
-        #
-        #         pygame.draw.rect(self.screen, (200, 200, 200), rect, width=1)
+        LEGEND_OFFSET = 150
+
+        self.draw_legend("Leader", self.LEADER_COLOR, (self.screen_size[0] / 2, 15))
+        self.draw_legend("Follower", self.FOLLOWER_COLOR, (self.screen_size[0] / 2, 30))
+        self.draw_legend("Runner", self.RUNNER_COLOR, (self.screen_size[0] / 2 + LEGEND_OFFSET, 15))
+        self.draw_legend("Howler", self.HOWLER_COLOR, (self.screen_size[0] / 2 + LEGEND_OFFSET, 30))
+        self.draw_legend("Decoy", self.DECOY_COLOR, (self.screen_size[0] / 2 + LEGEND_OFFSET, 45))
 
         for e in map.entities.preys:
-            color = (0, 255, 0)
+            color = self.RUNNER_COLOR
             if isinstance(e, Decoys):
-                color = (0, 255, 255)
+                color = self.DECOY_COLOR
+
+            if isinstance(e, Howler):
+                color = self.HOWLER_COLOR
 
             energy_left = self.font.render(str(e.stamina), True, (0, 0, 0))
             self.screen.blit(energy_left, (
@@ -248,9 +260,9 @@ class Renderer(object):
                 self.screen_size[1] + (self.screen_size[1] - self.display_size[1]) - 20
             ))
 
-            color = (255, 0, 0)
+            color = self.FOLLOWER_COLOR
             if isinstance(e, Leader):
-                color = (255, 255, 0)
+                color = self.LEADER_COLOR
 
             pygame.draw.circle(self.screen, color=color, center=(
                 (e.position[0] / (map.lims[0] * aspect_ratio)) *
@@ -268,8 +280,8 @@ class Renderer(object):
 
 
 class Manager:
-    def __init__(self, x_lims, y_lims, game_config: GameConfig):
-        self.map = Map(x_lims, y_lims, game_config)
+    def __init__(self, game_config: GameConfig):
+        self.map = Map(400, 400, game_config)
         self.time = 0
         self.steps = 0
 
